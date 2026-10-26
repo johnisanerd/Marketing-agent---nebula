@@ -1825,28 +1825,28 @@ async function searchLinkedInInfluencers(keyword, options = {}) {
 
   try {
     // Use LinkedIn profile search
-    const result = await runApifyActor('anchor~linkedin-people-search', {
-      searchUrl: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(keyword + ' influencer')}&origin=GLOBAL_SEARCH_HEADER`,
-      maxProfiles: limit
+    const result = await runApifyActor('johnvc~linkedin-people-search-api', {
+      keywords: keyword + ' influencer',
+      maxResults: limit
     }, { maxWait: 120000 });
 
-    if (!result.success || !result.data || result.data.length === 0) {
+    if (!result.success || !result.data || !result.data.some(profile => !profile.errorMessage)) {
       console.log('LinkedIn search returned no results');
       return { success: false, error: 'No results found', influencers: [] };
     }
 
-    const influencerProfiles = result.data.slice(0, limit).map(profile => ({
+    const influencerProfiles = result.data.filter(profile => !profile.errorMessage).slice(0, limit).map(profile => ({
       platform: 'linkedin',
       username: profile.publicIdentifier || profile.profileUrl?.split('/in/')[1]?.replace('/', '') || 'unknown',
       handle: profile.publicIdentifier || 'unknown',
-      name: profile.fullName || profile.firstName + ' ' + profile.lastName || 'Unknown',
-      profileImage: profile.profilePicture || profile.avatar || null,
-      bio: profile.headline || profile.summary || '',
-      followerCount: profile.connectionsCount || profile.followers || 0,
+      name: profile.fullName || 'Unknown',
+      profileImage: profile.profilePhotoUrl || null,
+      bio: profile.headline || profile.about || '',
+      followerCount: profile.followerCount || profile.connections || 0,
       engagementRate: 0,
       isVerified: false,
       jobTitle: profile.headline || '',
-      company: profile.companyName || '',
+      company: profile.currentCompany || '',
       profileUrl: profile.profileUrl || `https://linkedin.com/in/${profile.publicIdentifier}`,
       scrapedAt: new Date().toISOString()
     }));
